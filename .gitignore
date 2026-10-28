@@ -1,0 +1,20 @@
+# secrets
+.env
+*.key
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# data and outputs (clips are added deliberately, see README)
+out/
+clips/raw/
+*.MOV
+*.mov
+
+# editors
+.vscode/
+.idea/
+.DS_Store
