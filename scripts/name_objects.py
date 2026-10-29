@@ -24,6 +24,8 @@ import sys
 from pathlib import Path
 
 import cv2
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from openai import OpenAI
 
 BASE_URL = "https://api.meta.ai/v1"
@@ -38,7 +40,8 @@ model can find from text alone:
 - Use the most common everyday name, not a brand or a guess at the material.
 - Each phrase must pick out only one object in the scene; add a distinguishing
   colour or size word if two objects share a type.
-- Do NOT list hands, arms, people, the table, the floor, walls, or the camera.
+- - Do NOT list hands, arms, people, the table, the floor, walls, the camera,
+  or sheets of paper and the printed square marker.
 - Include objects that only appear in later frames.
 """
 
