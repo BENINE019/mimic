@@ -3,3 +3,4 @@ meta_sam_parser
 opencv-python-headless
 numpy
 requests
+mujoco>=3.2
