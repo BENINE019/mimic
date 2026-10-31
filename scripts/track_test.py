@@ -29,6 +29,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+
 from meta_sam_parser import decode_mask_to_raster
 from sam_api import segment_video, upload_video, validate_result
 

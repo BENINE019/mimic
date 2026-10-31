@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run naming, tracking, table mapping and events on every clips/cNN.mp4.
+# Run naming, tracking, table mapping, events, transcription and intent on every clips/cNN.mp4.
 # Usage: bash scripts/run_all.sh 9.5        (your measured marker size in cm)
 # Safe to rerun: existing names and cached SAM results are reused.
 set -uo pipefail
@@ -15,6 +15,10 @@ for clip in clips/c[0-9][0-9].mp4; do
   fi
   python -m mimic.tracking "$clip" --names "$out/names.json" || { echo "tracking failed for $name"; continue; }
   python -m mimic.table_map "$clip" --marker-cm "$MARKER_CM" || { echo "table mapping failed for $name"; continue; }
-  python -m mimic.events "$clip" || echo "events failed for $name"
+  python -m mimic.events "$clip" || { echo "events failed for $name"; continue; }
+  if [ ! -f "$out/narration.json" ] && [ -f "clips/audio/$name.wav" ]; then
+    python -m mimic.transcribe "$clip" || echo "transcription failed for $name"
+  fi
+  python -m mimic.intent "$clip" || echo "intent failed for $name"
 done
 echo "Done. Check out/cNN/topdown.png and out/cNN/timeline.png for each clip."

@@ -45,7 +45,7 @@ CONTAINER_CM = 8.0     # released within this distance of a container counts as 
 ON_CM = 4.0            # released within this distance of a static object counts as on top of it
 SMOOTH = 5             # median window over rest frames
 GROUP_FRAMES = 20      # grouped moves must start and end within this many frames
-GROUP_CM = 4.0         # and have displacements this similar
+GROUP_CM = 8.0         # and have displacements this similar
 
 
 def box_overlap_frac(a, b) -> float:
