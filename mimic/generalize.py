@@ -125,7 +125,11 @@ def main() -> None:
         else:
             extra = i % 2 == 0 and goal["type"] in ("put_all", "arrange")
             distractor = i % 3 == 2
-            objects = shuffle(base_objects, rng, extra, distractor)
+            for _ in range(30):
+                objects = shuffle(base_objects, rng, extra, distractor)
+                already, _why = planner.check(goal, objects, {o["key"]: o["xy"] for o in objects})
+                if not already:
+                    break
             variant = "shuffled" + (" +extra" if extra else "") + (" +distractor" if distractor else "")
         scene_dir = gen_dir / f"scene_{i:02d}"
         scene_dir.mkdir(exist_ok=True)

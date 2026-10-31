@@ -104,6 +104,22 @@ def relation_target(obj: dict, relation: str, anchor: dict | None, objects: list
     return (axy + d * gap).tolist()
 
 
+def goal_items(goal: dict, objects: list[dict], cont: dict | None = None) -> list[dict]:
+    """Objects a put_all / arrange goal is about.
+
+    scope "this": the objects that were demonstrated (role moved) plus any new object of the same
+    kind added later; scope "all": every object matching the category. Objects that cannot fit the
+    container are left out, so planner and checker agree.
+    """
+    cands = [o for o in objects if not o["container"] and not o.get("attached_to")
+             and matches_category(o, goal.get("category", ""))]
+    if goal.get("scope") == "this":
+        cands = [o for o in cands if o.get("role") in ("moved", "new")]
+    if cont is not None:
+        cands = [o for o in cands if fits_in(o, cont)]
+    return cands
+
+
 def fits_in(obj: dict, cont: dict) -> bool:
     """A long thin object stands in a cup; anything else must be narrower than the opening."""
     opening = min(cont["w_cm"], cont["d_cm"]) * 0.8
@@ -131,23 +147,14 @@ def plan(goal: dict, objects: list[dict]) -> tuple[list[dict], str]:
         cont = find_container(objects, goal.get("container", ""))
         if cont is None:
             return [], "no container in scene"
-        items = [o for o in objects if not o["container"] and not o.get("attached_to")
-                 and matches_category(o, goal.get("category", ""))]
+        items = goal_items(goal, objects, cont)
         if goal.get("order"):
             rank = {k: i for i, k in enumerate(goal["order"])}
             items.sort(key=lambda o: rank.get(o["key"], len(rank)))
-        skipped = []
         for o in items:
-            if np.linalg.norm(np.subtract(o["xy"], cont["xy"])) <= NEAR_CM:
-                continue
-            if not fits_in(o, cont):
-                skipped.append(o["key"])
-                continue
-            step(o, cont["xy"], into=cont["key"])
-        note = f"{len(steps)} item(s) into {cont['key']}"
-        if skipped:
-            note += f"; does not fit: {', '.join(skipped)}"
-        return steps, note
+            if np.linalg.norm(np.subtract(o["xy"], cont["xy"])) > NEAR_CM:
+                step(o, cont["xy"], into=cont["key"])
+        return steps, f"{len(steps)} item(s) into {cont['key']}"
 
     if t == "move":
         obj = find_object(objects, goal.get("object", ""))
@@ -161,8 +168,7 @@ def plan(goal: dict, objects: list[dict]) -> tuple[list[dict], str]:
         return steps, f"{obj['key']} {goal.get('relation', 'to')} {anchor['key'] if anchor else target}"
 
     if t == "arrange":
-        items = [o for o in objects if not o["container"] and not o.get("attached_to")
-                 and matches_category(o, goal.get("category", ""))]
+        items = goal_items(goal, objects)
         if len(items) < 2:
             return [], "fewer than two items to arrange"
         items.sort(key=lambda o: o["xy"][0])
@@ -206,8 +212,9 @@ def check(goal: dict, objects: list[dict], final_xy: dict[str, list[float]]) -> 
         cont = find_container(objects, goal.get("container", ""))
         if cont is None:
             return False, "no container"
-        items = [o for o in objects if not o["container"] and not o.get("attached_to")
-                 and matches_category(o, goal.get("category", ""))]
+        items = goal_items(goal, objects, cont)
+        if not items:
+            return False, "nothing to put in"
         bad = [o["key"] for o in items if np.linalg.norm(pos[o["key"]] - pos[cont["key"]]) > NEAR_CM]
         return (not bad), ("all in" if not bad else f"not in container: {', '.join(bad)}")
 
@@ -256,12 +263,11 @@ def check(goal: dict, objects: list[dict], final_xy: dict[str, list[float]]) -> 
         elif "behind" in r or "back" in r:
             ok = p[1] > a[1] + gap * 0.5 and abs(p[0] - a[0]) < gap + NEXT_TO_CM
         else:
-            ok = gap * 0.5 < dist < gap + NEXT_TO_CM + NEAR_CM
+            ok = gap * 0.5 < dist < gap + NEXT_TO_CM
         return ok, f"{dist:.1f} cm from {anchor['key']}"
 
     if t == "arrange":
-        items = [o for o in objects if not o["container"] and not o.get("attached_to")
-                 and matches_category(o, goal.get("category", ""))]
+        items = goal_items(goal, objects)
         if len(items) < 2:
             return False, "fewer than two items"
         pts = np.array([pos[o["key"]] for o in items])
